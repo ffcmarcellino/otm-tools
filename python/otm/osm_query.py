@@ -204,7 +204,7 @@ def __parse_jsons(jsons,fixes):
             nodes[node['id']] = node
 
         else:
-            print('unknown')
+            print('[ERROR] Unknown element type.')
 
     max_link_id = max([x for x in links.keys()])+1
     max_node_id = max([x for x in nodes.keys()])+1
@@ -239,7 +239,7 @@ def __read_way(element,fixes):
     #     'oneway'
 
     if 'tags' not in element:
-        print("ERROR: LINK WITH NO TAGS")
+        print("[ERROR] OSM returned a tag-less link.")
         return None
 
     tags = element['tags']
@@ -313,7 +313,7 @@ def __read_way(element,fixes):
             elif x[1].lower()=='mph':
                 link['maxspeed_kph'] = float(x[0])*MilesToKilometers
             else:
-                print("ERROR UNKNOWN UNITS")
+                print("[ERROR] Unknown units.")
     else:
         link['maxspeed_kph'] = 50
 
@@ -373,19 +373,19 @@ def __read_way(element,fixes):
 
     # check no clash in turn, turn:forward, turn:backward, turn:both_ways
     if 'turn' in tags and 'turn:forward' in tags:
-        print("ERROR 'turn' in tags and 'turn:forward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn' in tags and 'turn:forward' in tags")
 
     if 'turn' in tags and 'turn:backward' in tags:
-        print("ERROR 'turn' in tags and 'turn:backward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn' in tags and 'turn:backward' in tags")
 
     if 'turn' in tags and 'turn:both_ways' in tags:
-        print("ERROR 'turn' in tags and 'turn:both_ways' in tags")
+        print("[ERROR] Link", link['id'] , "'turn' in tags and 'turn:both_ways' in tags")
 
     if 'turn:both_ways' in tags and 'turn:forward' in tags:
-        print("ERROR 'turn:both_ways' in tags and 'turn:forward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn:both_ways' in tags and 'turn:forward' in tags")
 
     if 'turn:both_ways' in tags and 'turn:backward' in tags:
-        print("ERROR 'turn:both_ways' in tags and 'turn:backward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn:both_ways' in tags and 'turn:backward' in tags")
 
     # if no clash, copy turn and turn:both_ways to turn:forward and turn:backward
     if 'turn' in tags:
@@ -398,19 +398,19 @@ def __read_way(element,fixes):
 
     # check no clash turn:lanes, turn:lanes:forward, turn:lanes:backward, turn:lanes:both_ways
     if 'turn:lanes' in tags and 'turn:lanes:forward' in tags:
-        print("ERROR 'turn:lanes' in tags and 'turn:lanes:forward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn:lanes' in tags and 'turn:lanes:forward' in tags")
 
     if 'turn:lanes' in tags and 'turn:lanes:backward' in tags:
-        print("ERROR 'turn:lanes' in tags and 'turn:lanes:backward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn:lanes' in tags and 'turn:lanes:backward' in tags")
 
     if 'turn:lanes' in tags and 'turn:lanes:both_ways' in tags:
-        print("ERROR 'turn:lanes' in tags and 'turn:lanes:both_ways' in tags")
+        print("[ERROR] Link", link['id'] , "'turn:lanes' in tags and 'turn:lanes:both_ways' in tags")
 
     if 'turn:lanes:both_ways' in tags and 'turn:lanes:forward' in tags:
-        print("ERROR 'turn:lanes:both_ways' in tags and 'turn:lanes:forward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn:lanes:both_ways' in tags and 'turn:lanes:forward' in tags")
 
     if 'turn:lanes:both_ways' in tags and 'turn:lanes:backward' in tags:
-        print("ERROR 'turn:lanes:both_ways' in tags and 'turn:lanes:backward' in tags")
+        print("[ERROR] Link", link['id'] , "'turn:lanes:both_ways' in tags and 'turn:lanes:backward' in tags")
 
     # if no clash, copy turn and turn:lanes:both_ways to turn:lanes:forward and turn:lanes:backward
     if 'turn:lanes' in tags:
@@ -424,11 +424,11 @@ def __read_way(element,fixes):
     # check clash turn:lanes:* and turn:*
     if 'turn:lanes:forward' in tags and 'turn:forward' in tags:
         if tags['turn:lanes:forward'] != tags['turn:forward']:
-            print("ERROR 'turn:lanes:forward' in tags and 'turn:forward' in tags")
+            print("[ERROR] Link", link['id'] , "'turn:lanes:forward' in tags and 'turn:forward' in tags")
 
     if 'turn:lanes:backward' in tags and 'turn:backward' in tags:
         if tags['turn:lanes:backward'] != tags['turn:backward']:
-            print("ERROR 'turn:lanes:backward' in tags and 'turn:backward' in tags")
+            print("[ERROR] Link", link['id'] , "'turn:lanes:backward' in tags and 'turn:backward' in tags")
 
     # copy turn to turn lanes
     if 'turn:forward' in tags:
@@ -465,13 +465,19 @@ def __read_way(element,fixes):
     # resolve undefined number of lanes
     if math.isnan(link['lanes']):
         if link['turn_lanes'] == '*':
-            link['lanes'] = default_lanes_each_direction[link['highway']]
+            if link['highway'] in default_lanes_each_direction:
+                link['lanes'] = default_lanes_each_direction[link['highway']]
+            else:
+                link['lanes'] = 1
         else:
             link['lanes'] = len(link['turn_lanes'].split('|'))
 
     if math.isnan(link['lanes_backward']):
         if link['turn_lanes_backward'] == '*':
-            link['lanes_backward'] = default_lanes_each_direction[link['highway']]
+            if link['highway'] in default_lanes_each_direction:
+                link['lanes_backward'] = default_lanes_each_direction[link['highway']]
+            else:
+                link['lanes_backward'] = 1
         else:
             link['lanes_backward'] = len(link['turn_lanes_backward'].split('|'))
 
@@ -519,81 +525,6 @@ def __delete_link(link_id,links,nodes):
     end_node['in_links'].remove(link['id'])
 
     del links[link_id]
-
-def __simplify_roundabouts(links, nodes, external_nodes):
-
-    roundabout_links = [link['id'] for link in links.values() if link['junction']=='roundabout']
-
-    if len(roundabout_links)==0:
-        return
-
-    # collect roundabouts
-    roundabouts = []
-
-    while len(roundabout_links)>0:
-
-        link = links[roundabout_links[0]]
-
-        roundabout = []
-        roundabouts.append(roundabout)
-        roundabout_links.remove(link['id'])
-        roundabout.append(link['id'])
-
-        # construct the roundabout corresponding to this link
-        while True:
-            next_link = [nlnk['id'] for nlnk in links.values() if nlnk['start_node_id']==link['end_node_id'] and nlnk['id'] in roundabout_links]
-
-            if len(next_link)==0:
-                break
-            if len(next_link)>1:
-                print('sadfasdf asdfhq- 48h1')
-
-            link = links[next_link[0]]
-            roundabout_links.remove(link['id'])
-            roundabout.append(link['id'])
-
-    # loop through roundabouts
-    for roundabout in roundabouts:
-
-        # members of the roundabout
-        internal_links = list(map( lambda link_id : links[link_id], roundabout))
-        all_node_ids = set(map( lambda link : link['start_node_id'], internal_links)).union( set(map( lambda link : link['end_node_id'], internal_links)) )
-        all_nodes = list(map( lambda node_id : nodes[node_id] , all_node_ids))
-
-        # create the center node
-        center_node = {
-            'id':__new_node_id(),
-            'x':mean([node['x'] for node in all_nodes]),
-            'y':mean([node['y'] for node in all_nodes]),
-            'in_links':set(),
-            'out_links':set(),
-            'type':'roundabout'
-        }
-        nodes[center_node['id']]=center_node
-        external_nodes.add(center_node['id'])
-
-        # deleter internal links
-        for link in internal_links:
-            __delete_link(link['id'],links,nodes)
-
-        for node in all_nodes:
-
-            # connect incomming and outgoing links to centeral node
-            for link_id in node['in_links']:
-                link = links[link_id]
-                link['end_node_id'] = center_node['id']
-                link['nodes'][-1] = center_node['id']
-                center_node['in_links'].add(link['id'])
-
-            for link_id in node['out_links']:
-                link=links[link_id]
-                link['start_node_id']=center_node['id']
-                link['nodes'][0] = center_node['id']
-                center_node['out_links'].add(link['id'])
-                # FIX link['nodes']
-
-            del nodes[node['id']]
-            external_nodes.remove(node['id'])
 
 # SPLIT STREETS AND ELIMINATING NODES ---------------------------------
 
@@ -714,7 +645,7 @@ def __flip_wrong_way_links(links):
     flip_links = [link for link in links.values() if link['flip']]
 
     if len(flip_links)>0:
-        print("WARNING: FLIP LINKS ARE NOT IMPLEMENTED!!!!")
+        print("[WARNING] Flip links are not implemented. Ignoring this tag.")
 
     # remove flip_links attribute
     for link in links.values():
@@ -731,7 +662,8 @@ def __expand_bidirectional_links(links, nodes):
 
         existing_backward_links = [link for link in links.values() if link['start_node_id']==end_node_id and link['end_node_id']==start_node_id]
         if len(existing_backward_links)>0:
-            print("ERROR: FOUND A BACKWARD LINK")
+            print("[WARNING] OSM returned a backwards link. I'm skipping this bi-directional link ", link['id'])
+            continue
 
         backward_link = link.copy()
 
@@ -895,13 +827,13 @@ def __create_road_connections(links, nodes):
                 lanes_covered.update(set(road_conn['in_lanes']))
 
         if lanes_covered != set(range(1,link['lanes']+1)):
-            print('ERROR Not all lanes are covered with road connections')
+            print('[WARNING] Link', link['id'], ': Not all lanes have outgoing road connections.')
 
         # check that all next_links are represented
         to_links = set([road_conn['out_link'] for road_conn in road_conns])
         next_links=set([x['id'] for x in links.values() if x['id'] in end_node['out_links'] and x['end_node_id']!=link['start_node_id']])
         if to_links!=next_links:
-            print('ERROR Not all outgoing links are covered with road connections')
+            print('[WARNING] Link', link['id'], ': Not all outgoing links are accessible by road connections')
 
         all_road_conns.extend(road_conns)
 
@@ -909,7 +841,7 @@ def __create_road_connections(links, nodes):
 
 ################################################
 
-def load_from_osm(west,north,east,south,exclude_tertiary,simplify_roundabouts,fixes={}):
+def load_from_osm(west,north,east,south,exclude_tertiary,fixes={}):
 
     # 1. query osm
     print('> querying osm')
@@ -928,9 +860,6 @@ def load_from_osm(west,north,east,south,exclude_tertiary,simplify_roundabouts,fi
     #    b) they contain an traffic signal at an internal node
     print('> splitting links')
     internal_nodes, external_nodes = __split_streets(links, nodes)
-
-    if simplify_roundabouts:
-        __simplify_roundabouts(links, nodes, external_nodes)
 
     # 4. eliminate simple external nodes
     print('> eliminating simple external nodes')

@@ -1,17 +1,15 @@
 from otm.OSMLoader import OSMLoader
-import pickle
 
-osmtool = OSMLoader()
-osmtool.load_from_osm(
-    north=38, 
-	west=-122-(17/60)-(39.22/3600),
-	south=37+(51/60)+(50.40/3600),
-	east=-122-(16/60)-(2.24/3600),
-    simplify_roundabouts=False
+osmloader = OSMLoader()
+osmloader.load_from_osm(
+    north= 37 + (52/60) + (44.11/3600),
+    west= -122 - (17/60) - (31.01/3600),
+    south= 37 + (51/60) + (47.76/3600),
+    east= -122 - (15/60) - (10.83/3600),
+    exclude_tertiary=False
 )
 
-osmtool.save_to_xml('berkeley2.xml')
+osmloader.set_model({'type':'ctm','sim_dt':'2','max_cell_length':'100'})
+osmloader.set_demands_per_commodity_and_source_vph(200)
 
-print('DONE')
-
-
+osmloader.save_to_xml('berkeley.xml')

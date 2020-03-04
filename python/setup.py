@@ -2,6 +2,7 @@ import subprocess
 import sys
 from setuptools.command.develop import develop
 import setuptools
+from sys import platform
 
 class DevelopWrapper(develop):
   """Compiles the otm-python-api so that pyotm can
@@ -16,7 +17,10 @@ class DevelopWrapper(develop):
 
   def _compile_otm_python_api(self):
     try:
-        subprocess.call('mvn package -f javacnct/pom.xml -DskipTests'.split(' '), shell=True)
+        if platform == "linux" or platform == "linux2" or platform == "darwin":
+            subprocess.call('mvn package -f javacnct/pom.xml -DskipTests'.split(' '))
+        elif platform == "win32":
+            subprocess.call('mvn package -f javacnct/pom.xml -DskipTests'.split(' '), shell=True)
     except Exception as err:
         print("Please install maven")
         sys.exit(1)

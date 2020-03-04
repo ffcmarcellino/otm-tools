@@ -11,7 +11,7 @@ from py4j.java_gateway import JavaGateway, GatewayParameters
 
 class JavaConnect():
 
-    def __init__(self, port_num = 25335):
+    def __init__(self, port_num = 25333):
 
         self.process = None
         self.pid = None
@@ -31,8 +31,9 @@ class JavaConnect():
             else:
                 raise Exception('Unknown platform')
 
-            # self.gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True,port=int(self.port_number)))
-            self.gateway = JavaGateway(gateway_parameters=GatewayParameters(port=int(self.port_number)))
+            self.gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True,port=int(self.port_number)))
+            # self.gateway = JavaGateway(gateway_parameters=GatewayParameters(port=int(self.port_number)))
+            # self.gateway = JavaGateway()
 
         else:
             print("Jar file missing")
