@@ -8,7 +8,7 @@ class DevelopWrapper(develop):
   call on the OTM api."""
 
   def run(self):
-    # Run this first so the develop stops in case 
+    # Run this first so the develop stops in case
     # these fail otherwise the Python package is
     # successfully developed
     self._compile_otm_python_api()
@@ -16,7 +16,7 @@ class DevelopWrapper(develop):
 
   def _compile_otm_python_api(self):
     try:
-        subprocess.call('mvn package -f javacnct/pom.xml -DskipTests'.split(' '))
+        subprocess.call('mvn package -f javacnct/pom.xml -DskipTests'.split(' '), shell=True)
     except Exception as err:
         print("Please install maven")
         sys.exit(1)
