@@ -26,6 +26,15 @@ class OTMWrapper:
         if self.conn is not None:
             self.conn.close()
 
+    def describe(self):
+        print("# nodes: {}".format(self.otm.scenario().get_num_nodes()))
+        print("# links: {}".format(self.otm.scenario().get_num_links()))
+        print("# commodities: {}".format(self.otm.scenario().get_num_commodities()))
+        print("# subnetworks: {}".format(self.otm.scenario().get_num_subnetworks()))
+        print("# sensors: {}".format(self.otm.scenario().get_num_sensors()))
+        print("# actuators: {}".format(self.otm.scenario().get_num_actuators()))
+        print("# controllers: {}".format(self.otm.scenario().get_num_controllers()))
+
     def show_network(self, linewidth=1):
 
         fig, ax = plt.subplots()
